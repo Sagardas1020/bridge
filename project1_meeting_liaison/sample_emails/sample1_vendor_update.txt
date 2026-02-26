@@ -1,0 +1,15 @@
+Subject: Quick update on the Vendor Integration — action needed
+
+Hi Sarah,
+
+Hope your week's going well. Just wanted to flag that the vendor sent over their
+API docs yesterday. I've had a chance to go through them and there are a couple of
+things we'll need to sort out before we can proceed.
+
+Could you loop in the client-side team and get their input by Thursday? Specifically,
+we need clarity on the authentication flow — whether they're going with OAuth or API keys.
+
+Let me know if you need me to join the call. Happy to walk through the technical side.
+
+Thanks,
+[Your Name]

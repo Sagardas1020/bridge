@@ -1,0 +1,13 @@
+Meeting: Q3 Budget Review
+Date: February 20, 2026
+Attendees: John (Finance), Sarah (Marketing), Mike (Engineering)
+
+Discussion:
+- John mentioned that the Q3 budget proposal is still pending approval from leadership.
+  He agreed to submit the finalized report to the CFO by end of this week.
+- Sarah confirmed the marketing campaign launch is delayed. She will reschedule it 
+  to March 1st and send updated timelines to all stakeholders by Wednesday.
+- Mike raised concerns about the API integration with the client portal. 
+  He will coordinate with the vendor and send a technical summary to Sarah by Thursday.
+- All attendees agreed to schedule a follow-up meeting next Monday at 10am.
+  Sarah to send the calendar invite.

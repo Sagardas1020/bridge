@@ -1,0 +1,18 @@
+# Secret credentials - never push
+.env
+
+# Virtual environments
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# ChromaDB vector index (auto-regenerated)
+chroma_voice_db/
+
+# OS files
+.DS_Store
+Thumbs.db
