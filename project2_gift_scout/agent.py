@@ -38,6 +38,7 @@ from langgraph.graph import StateGraph, START, END
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from tools import search_gifts
+import traceback
 
 load_dotenv()
 
@@ -71,12 +72,16 @@ Your job is to learn about a gift recipient through a natural, warm conversation
 
 You need to collect all of the following:
 - Their name or relationship (e.g. "my mom", "my colleague Mark")
-- Age range: child (under 12), teen (13-17), adult (18-60), or senior (60+)
+- Age range (see rules below for how to ask this)
 - Main hobbies or interests (at least 2 specific ones)
 - Budget range: under $25 / $25-$50 / $50-$100 / $100+
 - Occasion: birthday, holiday, thank-you, graduation, etc.
 
-Rules:
+Age range rules:
+- If the recipient is clearly a parental or grandparental figure (mom, mother, dad, father, parent, grandma, grandpa, grandmother, grandfather), do NOT ask if they are an adult. Instead, directly ask for their approximate age range (e.g. "Are they in their 30s,40s, 50s, or 60s+?"). Use labels like: 40s (40-49), 50s (50-59), senior (60+).
+- For all other recipients, ask: child (under 12), teen (13-17), adult (18-60), or senior (60+).
+
+General rules:
 - Ask ONE focused question at a time. Be warm and conversational.
 - If the user already volunteered information, acknowledge it and ask about what's missing.
 - Once you have ALL five pieces of info, respond with EXACTLY this format on two lines:
@@ -125,11 +130,14 @@ def interview_node(state: GiftState) -> dict:
     try:
         response = llm.invoke(messages)
         raw_reply = response.content
-    except ValueError as e:
-        if "content filter" in str(e).lower():
-            raw_reply = "I'm sorry, I had trouble processing that. Could you rephrase and tell me a bit about the person you're buying a gift for?"
+    except Exception as e:
+        error_str = str(e).lower()
+        print(f"[Gift Scout] LLM error: {type(e).__name__}: {e}")
+        traceback.print_exc()
+        if "content filter" in error_str or "content_filter" in error_str or "badrequest" in error_str or "400" in error_str:
+            raw_reply = "I ran into a content filter issue with Azure OpenAI. Could you rephrase your last message and try again?"
         else:
-            raise
+            raw_reply = f"Something went wrong ({type(e).__name__}). Please try again."
 
     profile = state.get("recipient_profile", {})
     ready = False
@@ -161,24 +169,26 @@ def search_node(state: GiftState) -> dict:
     """
     SEARCH NODE (Tool Node)
     -----------------------
-    Builds a targeted query from the recipient profile and calls
-    the Tavily search tool to retrieve real products with live prices.
-    This is the agent's "hand" reaching out to the real world.
+    Runs one Tavily search per hobby/interest so results are tightly
+    matched to what the recipient actually enjoys.
+    All results are combined and passed to the format node.
     """
     profile = state["recipient_profile"]
-    hobbies = ", ".join(profile.get("hobbies", ["general"]))
-    budget = profile.get("budget", "under $100")
+    hobbies = profile.get("hobbies", ["general"])
     occasion = profile.get("occasion", "gift")
     age = profile.get("age", "adult")
 
-    query = (
-        f"best {occasion} gift ideas for {age} who loves {hobbies} "
-        f"budget {budget} buy online 2025 with prices"
-    )
-    print(f"[Gift Scout] Tavily query: '{query}'")
+    combined_results = []
+    for hobby in hobbies:
+        query = (
+            f"shop {hobby} gifts products to buy online "
+            f"best {hobby} gift ideas for {age} {occasion} 2026"
+        )
+        print(f"[Gift Scout] Tavily query: '{query}'")
+        result = search_gifts.invoke({"query": query})
+        combined_results.append(f"=== Products for interest: {hobby} ===\n{result}")
 
-    results = search_gifts.invoke({"query": query})
-    return {"search_results": results}
+    return {"search_results": "\n\n".join(combined_results)}
 
 
 def format_results_node(state: GiftState) -> dict:
@@ -197,17 +207,17 @@ def format_results_node(state: GiftState) -> dict:
 
     prompt = f"""The user is searching for a gift for: {json.dumps(profile, indent=2)}
 
-Here are real product search results from the web:
+Here are real product search results from the web, grouped by hobby/interest:
 {state['search_results']}
 
-Present the 4-5 most relevant options as a friendly, organized list.
+Present the best 2-3 gift options PER hobby as a friendly, organized list grouped by hobby.
 For each gift include:
 - 🎁 Product name and brief description
 - 💰 Price or price range (if mentioned)
-- ⭐ Why it suits this specific person (mention their hobbies/occasion)
+- ⭐ Why it suits this specific person (mention their hobby/occasion)
 - 🔗 Where to buy (link if available)
 
-Be warm, personal, and end with a helpful purchasing tip."""
+Focus on how well each gift matches the recipient's interests. Be warm, personal, and end with a helpful purchasing tip."""
 
     response = llm.invoke(prompt)
     return {

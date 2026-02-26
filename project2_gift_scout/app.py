@@ -111,10 +111,20 @@ for msg in messages:
 # USER INPUT
 # ─────────────────────────────────────────────
 
-# Only show input if the search isn't done yet
+# Only show input if the search isn't done AND the agent isn't currently in search mode
 search_done = bool(agent_state.get("search_results", ""))
+ready_to_search = agent_state.get("ready_to_search", False)
 
-if not search_done:
+if search_done:
+    st.success("✅ Gift search complete! See recommendations above.")
+    st.caption("Click **Start Over** in the sidebar to search for another recipient.")
+elif ready_to_search:
+    # Profile is complete — auto-trigger the search immediately
+    with st.spinner("🔍 Searching for gifts... please wait."):
+        new_state = run_turn(st.session_state["agent_state"])
+        st.session_state["agent_state"] = new_state
+    st.rerun()
+else:
     user_input = st.chat_input("Type your answer here...")
 
     if user_input:
@@ -131,6 +141,3 @@ if not search_done:
             st.session_state["agent_state"] = new_state
 
         st.rerun()
-else:
-    st.success("✅ Gift search complete! See recommendations above.")
-    st.caption("Click **Start Over** in the sidebar to search for another recipient.")

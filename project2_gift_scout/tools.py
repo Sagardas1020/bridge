@@ -36,16 +36,25 @@ def get_search_tool():
 @tool
 def search_gifts(query: str) -> str:
     """
-    Searches the web for gift recommendations based on the recipient's profile.
+    Searches the web for gift product listings based on the recipient's hobbies/interests.
 
     Args:
         query: A specific gift search query built from the recipient's hobbies/interests.
-               Example: "unique gifts for photography enthusiasts under $100"
+               Example: "unique gifts for photography enthusiasts"
 
     Returns:
         A formatted string of product results with names, descriptions, and links.
     """
-    search = TavilySearchResults(max_results=6)
+    search = TavilySearchResults(
+        max_results=8,
+        search_depth="advanced",
+        include_answer=True,
+        include_domains=[
+            "amazon.com", "etsy.com", "uncommongoods.com",
+            "bestbuy.com", "walmart.com", "target.com",
+            "giftguide.com", "wirecutter.com", "buzzfeed.com"
+        ]
+    )
     results = search.invoke(query)
 
     if not results:
@@ -56,7 +65,7 @@ def search_gifts(query: str) -> str:
     for i, result in enumerate(results, 1):
         title = result.get("title", "Product")
         url = result.get("url", "")
-        content = result.get("content", "")[:300]  # Trim long descriptions
+        content = result.get("content", "")[:400]  # Keep enough detail
         formatted.append(f"{i}. **{title}**\n   {content}\n   🔗 {url}")
 
     return "\n\n".join(formatted)
